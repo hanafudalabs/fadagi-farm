@@ -1,0 +1,453 @@
+openapi: 3.0.0
+info:
+  title: API Peternakan Sapi B2B Fadagi Farm
+  description: |-
+    Spesifikasi API untuk platform investasi peternakan sapi B2B.
+    API ini memiliki dua peran utama: Admin dan Investor.
+    
+    **Authentication:**
+    Semua endpoint yang ditandai dengan ikon gembok memerlukan otentikasi.
+    Dapatkan Bearer Token dari endpoint `/auth/login` dan sertakan dalam header `Authorization` pada setiap request.
+    Format: `Authorization: Bearer <TOKEN>`
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:3000/api
+    description: Development server
+  - url: https://api.peternakansapi.com
+    description: Production server
+
+tags:
+  - name: Authentication
+    description: Registrasi dan Login Pengguna
+  - name: Admin - Manajemen Investor
+    description: (Admin Only) Operasi untuk mengelola akun investor
+  - name: Admin - Manajemen Ternak
+    description: (Admin Only) Operasi untuk mengelola data sapi
+  - name: Investor - Portofolio
+    description: (Investor Only) Operasi untuk melihat portofolio investasi dan ternak
+  - name: Investor - Referral
+    description: (Investor Only) Operasi terkait program referral
+  - name: Public
+    description: Endpoint yang bisa diakses publik
+
+paths:
+  # --- Authentication ---
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Registrasi investor baru
+      description: Membuat akun investor baru. Bisa menyertakan kode referral.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+      responses:
+        '201':
+          description: User berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          description: Input tidak valid atau email sudah ada
+
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Login pengguna
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+      responses:
+        '200':
+          description: Login berhasil, mengembalikan token JWT
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        '401':
+          description: Email atau password salah
+
+  /auth/me:
+    get:
+      tags:
+        - Authentication
+      summary: Mendapatkan data pengguna yang sedang login
+      security:
+        - BearerAuth: [ ]
+      responses:
+        '200':
+          description: Data pengguna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '401':
+          description: Tidak terotentikasi
+
+  # --- Public ---
+  /cattle/available:
+    get:
+      tags:
+        - Public
+      summary: Melihat daftar sapi yang tersedia untuk investasi
+      responses:
+        '200':
+          description: Daftar sapi yang tersedia
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Cattle'
+
+  # --- Admin - Investor Management ---
+  /admin/investors:
+    get:
+      tags:
+        - Admin - Manajemen Investor
+      summary: (Admin) Mendapatkan semua daftar investor
+      security:
+        - BearerAuth: [ ]
+      responses:
+        '200':
+          description: Sukses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserResponse'
+        '401':
+          description: Tidak terotentikasi
+        '403':
+          description: Tidak diizinkan (bukan admin)
+
+  # --- Admin - Cattle Management ---
+  /admin/cattle:
+    post:
+      tags:
+        - Admin - Manajemen Ternak
+      summary: (Admin) Menambahkan data sapi baru
+      security:
+        - BearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CattleCreate'
+      responses:
+        '201':
+          description: Sapi berhasil ditambahkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cattle'
+        '401':
+          description: Tidak terotentikasi
+        '403':
+          description: Tidak diizinkan (bukan admin)
+
+  /admin/cattle/{cattleId}/updates:
+    post:
+      tags:
+        - Admin - Manajemen Ternak
+      summary: (Admin) Menambahkan laporan perkembangan sapi
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - in: path
+          name: cattleId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CattleUpdateCreate'
+      responses:
+        '201':
+          description: Laporan perkembangan berhasil ditambahkan
+        '401':
+          description: Tidak terotentikasi
+        '403':
+          description: Tidak diizinkan
+
+  # --- Investor - Portfolio ---
+  /investor/portfolio:
+    get:
+      tags:
+        - Investor - Portofolio
+      summary: (Investor) Mendapatkan daftar ternak milik investor
+      security:
+        - BearerAuth: [ ]
+      responses:
+        '200':
+          description: Daftar ternak milik investor
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CattleWithUpdates'
+        '401':
+          description: Tidak terotentikasi
+
+  /investor/transactions:
+    get:
+      tags:
+        - Investor - Portofolio
+      summary: (Investor) Melihat riwayat transaksi pribadi
+      security:
+        - BearerAuth: [ ]
+      responses:
+        '200':
+          description: Daftar transaksi
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Transaction'
+        '401':
+          description: Tidak terotentikasi
+
+  # --- Investor - Referral ---
+  /investor/referral:
+    get:
+      tags:
+        - Investor - Referral
+      summary: (Investor) Mendapatkan info referral
+      description: Mendapatkan kode referral, daftar orang yang di-refer, dan total komisi.
+      security:
+        - BearerAuth: [ ]
+      responses:
+        '200':
+          description: Info referral pengguna
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  myReferralCode:
+                    type: string
+                    example: "cuid_abcde12345"
+                  referredUsers:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        email:
+                          type: string
+                        joinDate:
+                          type: string
+                          format: date-time
+                  totalCommission:
+                    type: number
+                    format: float
+                    example: 500000
+        '401':
+          description: Tidak terotentikasi
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # --- MODEL SCHEMAS ---
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum: [ ADMIN, INVESTOR ]
+        referralCode:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    UserResponse:
+      description: Data user yang aman untuk ditampilkan (tanpa password)
+      allOf:
+        - $ref: '#/components/schemas/User'
+
+    Cattle:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tagId:
+          type: string
+        name:
+          type: string
+        breed:
+          type: string
+        gender:
+          type: string
+          enum: [ MALE, FEMALE ]
+        birthDate:
+          type: string
+          format: date
+        initialWeight:
+          type: number
+          format: float
+        status:
+          type: string
+          enum: [ AVAILABLE, INVESTED, SOLD, DECEASED ]
+
+    CattleWithUpdates:
+      allOf:
+        - $ref: '#/components/schemas/Cattle'
+        - type: object
+          properties:
+            updates:
+              type: array
+              items:
+                $ref: '#/components/schemas/CattleUpdate'
+
+    CattleUpdate:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date-time
+        weight:
+          type: number
+          format: float
+        healthNotes:
+          type: string
+        photoUrl:
+          type: string
+          format: uri
+
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        amount:
+          type: number
+          format: float
+        type:
+          type: string
+          enum: [ INVESTMENT_DEPOSIT, PROFIT_PAYOUT, REFERRAL_COMMISSION, WITHDRAWAL ]
+        status:
+          type: string
+          enum: [ PENDING, COMPLETED, FAILED ]
+        createdAt:
+          type: string
+          format: date-time
+
+    # --- REQUEST BODY SCHEMAS ---
+    UserCreate:
+      type: object
+      required:
+        - name
+        - email
+        - password
+      properties:
+        name:
+          type: string
+          example: "Budi Investor"
+        email:
+          type: string
+          format: email
+          example: "budi@investor.com"
+        password:
+          type: string
+          format: password
+          example: "password123"
+        referrerCode:
+          type: string
+          description: Kode referral dari pengguna lain (opsional)
+          example: "cuid_xyz987"
+
+    CattleCreate:
+      type: object
+      required:
+        - tagId
+        - breed
+        - gender
+        - birthDate
+        - initialWeight
+      properties:
+        tagId:
+          type: string
+          example: "ID-SAPI-001"
+        name:
+          type: string
+          example: "Gagah"
+        breed:
+          type: string
+          example: "Limosin"
+        gender:
+          type: string
+          enum: [ MALE, FEMALE ]
+        birthDate:
+          type: string
+          format: date
+          example: "2023-01-15"
+        initialWeight:
+          type: number
+          format: float
+          example: 350.5
+
+    CattleUpdateCreate:
+      type: object
+      required:
+        - weight
+        - healthNotes
+      properties:
+        weight:
+          type: number
+          format: float
+          example: 450.2
+        healthNotes:
+          type: string
+          example: "Vaksinasi PMK tahap 2 selesai. Nafsu makan baik."
+        photoUrl:
+          type: string
+          format: uri
+          example: "https://cdn.example.com/sapi/foto_update_1.jpg"
