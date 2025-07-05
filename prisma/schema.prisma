@@ -1,0 +1,141 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  password     String
+  role         Role     @default(INVESTOR)
+  referralCode String   @unique @default(uuid())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Referral
+  referredById String? // ID of the user who referred this user (optional)
+  referredBy   User?   @relation("Referrals", fields: [referredById], references: [id])
+  referrals    User[]  @relation("Referrals") // Users who were referred by this user
+
+  // Relations to other data
+  UserProfile UserProfile?
+  Investment  Investment[]
+  Transaction Transaction[]
+}
+
+model UserProfile {
+  id            String  @id @default(uuid())
+  phoneNumber   String?
+  address       String?
+  bankName      String? // Bank name for withdrawal
+  accountNumber String? // Account number for withdrawal
+  userId        String  @unique
+  user          User    @relation(fields: [userId], references: [id])
+}
+
+model Cattle {
+  id            String       @id @default(uuid())
+  tagId         String       @unique
+  name          String? // Cattle name (optional)
+  breed         String // Cattle breed
+  gender        Gender
+  birthDate     DateTime
+  initialWeight Float
+  status        CattleStatus @default(AVALIABLE)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  // Relation
+  updates      CattleUpdate[] // History of cattle updates
+  investmentId String?
+  investment   Investment?    @relation(fields: [investmentId], references: [id])
+}
+
+model CattleUpdate {
+  id          String   @id @default(uuid())
+  date        DateTime @default(now())
+  weight      Float
+  healthNotes String
+  photoUrl    String?
+
+  // Relation 
+  cattleId String
+  cattle   Cattle @relation(fields: [cattleId], references: [id])
+}
+
+model Investment {
+  id              String       @id @default(uuid())
+  investmentDate  DateTime     @default(now())
+  initialAmount   Float
+  projectedAmount Float?
+  finalProfit     Float?
+  status          InvestStatus @default(ACTIVE)
+
+  // Relation
+  investorId   String
+  investor     User          @relation(fields: [investorId], references: [id])
+  Cattle       Cattle[]
+  transactions Transaction[]
+}
+
+model Transaction {
+  id        String          @id @default(uuid())
+  amount    Float
+  type      TransactionType
+  status    PaymentStatus   @default(PENDING)
+  createdAt DateTime        @default(now())
+
+  // Relation
+  userId       String
+  user         User        @relation(fields: [userId], references: [id])
+  investmentId String?
+  investment   Investment? @relation(fields: [investmentId], references: [id])
+}
+
+// Enums
+enum Role {
+  ADMIN
+  INVESTOR
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum CattleStatus {
+  AVALIABLE
+  INVESTED
+  SOLD
+  DECEASED
+}
+
+enum InvestStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum TransactionType {
+  INVESTMENT_DEPOSIT
+  PROFIT_PAYOUT
+  REFERRAL_COMMISSION
+  WITHDRAWAL
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
