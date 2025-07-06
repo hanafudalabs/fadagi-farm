@@ -1,7 +1,13 @@
+import path from 'path';
+
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
     compatibilityDate: '2025-05-15',
     devtools: {enabled: true},
+    alias: {
+        '~': path.resolve(__dirname, './'),
+        '@': path.resolve(__dirname, './'),
+    },
     runtimeConfig: {
         jwtSecret: process.env.JWT_SECRET,
         emailHost: process.env.EMAIL_HOST,
