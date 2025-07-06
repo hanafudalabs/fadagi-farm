@@ -1,12 +1,12 @@
 import prisma from "~/utils/prisma.js";
 import bcrypt from "bcrypt";
-import {userRegisterValidation} from "~/server/validation/userRegisterValidaton.js";
+import {userRegisterValidation} from "~/server/validation/user-register-validation.js";
 
 export default defineEventHandler(async (event) => {
     const body = await readBody(event);
 
     // Validate user input
-    const {error, value} = userRegisterValidation(body);
+    const {error, value} = userRegisterValidation.validate(body);
     if (error) {
         throw createError({
             statusCode: 400,
