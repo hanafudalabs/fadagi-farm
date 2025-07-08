@@ -24,15 +24,15 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  // Referral
-  referredById String? // ID of the user who referred this user (optional)
+  referredById String? // ID of the user who referrewd this user (optional)
   referredBy   User?   @relation("Referrals", fields: [referredById], references: [id])
   referrals    User[]  @relation("Referrals") // Users who were referred by this user
 
-  // Relations to other data
-  UserProfile UserProfile?
-  Investment  Investment[]
-  Transaction Transaction[]
+  profile      UserProfile?
+  investments  Investment[]
+  transactions Transaction[]
+  savings      Saving[]
+  documents    Document[]
 }
 
 model UserProfile {
@@ -57,7 +57,6 @@ model Cattle {
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 
-  // Relation
   updates      CattleUpdate[] // History of cattle updates
   investmentId String?
   investment   Investment?    @relation(fields: [investmentId], references: [id])
@@ -70,7 +69,7 @@ model CattleUpdate {
   healthNotes String
   photoUrl    String?
 
-  // Relation 
+  // Relation
   cattleId String
   cattle   Cattle @relation(fields: [cattleId], references: [id])
 }
@@ -79,15 +78,33 @@ model Investment {
   id              String       @id @default(uuid())
   investmentDate  DateTime     @default(now())
   initialAmount   Float
-  projectedAmount Float?
+  projectedProfit Float?
   finalProfit     Float?
   status          InvestStatus @default(ACTIVE)
 
-  // Relation
-  investorId   String
-  investor     User          @relation(fields: [investorId], references: [id])
-  Cattle       Cattle[]
+  investorId String
+  investor   User     @relation(fields: [investorId], references: [id])
+  cattles    Cattle[]
+
   transactions Transaction[]
+  documents    Document[]
+  insurances   Insurance[]
+  shipments    Shipment[]
+}
+
+model Saving {
+  id        String       @id @default(uuid())
+  name      String
+  balance   Float        @default(0)
+  status    SavingStatus @default(ACTIVE)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  transactions Transaction[]
+  documents    Document[]
 }
 
 model Transaction {
@@ -95,13 +112,57 @@ model Transaction {
   amount    Float
   type      TransactionType
   status    PaymentStatus   @default(PENDING)
+  notes     String?
   createdAt DateTime        @default(now())
 
-  // Relation
-  userId       String
-  user         User        @relation(fields: [userId], references: [id])
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
   investmentId String?
   investment   Investment? @relation(fields: [investmentId], references: [id])
+
+  savingId String?
+  saving   Saving? @relation(fields: [savingId], references: [id])
+}
+
+model Document {
+  id         String       @id @default(uuid())
+  name       String
+  url        String
+  type       DocumentType
+  uploadedAt DateTime     @default(now())
+
+  userId       String?
+  user         User?       @relation(fields: [userId], references: [id])
+  investmentId String?
+  investment   Investment? @relation(fields: [investmentId], references: [id])
+  savingId     String?
+  saving       Saving?     @relation(fields: [savingId], references: [id])
+}
+
+model Insurance {
+  id             String           @id @default(uuid())
+  policyNumber   String           @unique
+  provider       String
+  coverageAmount Float
+  startDate      DateTime
+  endDate        DateTime
+  status         InsurancesStatus @default(ACTIVE)
+
+  Investment   Investment? @relation(fields: [investmentId], references: [id])
+  investmentId String?
+}
+
+model Shipment {
+  id             String         @id @default(uuid())
+  shippingDate   DateTime
+  trackingNumber String?
+  address        String
+  recipient      String
+  status         ShipmentStatus @default(PROCESSING)
+
+  Investment   Investment? @relation(fields: [investmentId], references: [id])
+  investmentId String?     @unique
 }
 
 // Enums
@@ -124,18 +185,47 @@ enum CattleStatus {
 
 enum InvestStatus {
   ACTIVE
-  INACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum SavingStatus {
+  ACTIVE
+  CLOSED
 }
 
 enum TransactionType {
   INVESTMENT_DEPOSIT
   PROFIT_PAYOUT
+  SAVING_DEPOSIT
+  SAVING_WITHDRAWAL
   REFERRAL_COMMISSION
-  WITHDRAWAL
+  GENERAL_WITHDRAWAL
 }
 
 enum PaymentStatus {
   PENDING
   SUCCESS
   FAILED
+}
+
+enum DocumentType {
+  AGREEMENT
+  PAYMENT_PROOF
+  INSURANCE_POLICY
+  IDENTITY_CARD
+  OTHER
+}
+
+enum InsurancesStatus {
+  ACTIVE
+  CLAIMED
+  EXPIRED
+}
+
+enum ShipmentStatus {
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
 }
