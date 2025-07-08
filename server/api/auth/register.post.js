@@ -9,8 +9,7 @@ export default defineEventHandler(async (event) => {
     const {error, value} = userRegisterValidation.validate(body);
     if (error) {
         throw createError({
-            statusCode: 400,
-            statusMessage: error.details[0].message
+            statusCode: 400, statusMessage: error.details[0].message
         });
     }
 
@@ -24,8 +23,7 @@ export default defineEventHandler(async (event) => {
     });
     if (existingUser) {
         throw createError({
-            statusCode: 409,
-            statusMessage: "Email already exists"
+            statusCode: 409, statusMessage: "Email already exists"
         });
     }
 
@@ -45,35 +43,32 @@ export default defineEventHandler(async (event) => {
             referredById = referrer.id;
         } else {
             throw createError({
-                statusCode: 400,
-                statusMessage: "Invalid referrer code"
+                statusCode: 400, statusMessage: "Invalid referrer code"
             });
         }
     }
 
     // Create a new user
+    let newUser
     try {
-        await prisma.user.create({
+        newUser = await prisma.user.create({
             data: {
-                name,
-                email,
-                password: hashedPassword,
-                role: "INVESTOR",
-                ...(referredById && {
+                name, email, password: hashedPassword, role: "INVESTOR", ...(referredById && {
                     referredById: referredById
                 })
             }
         });
     } catch (error) {
         throw createError({
-            statusCode: 500,
-            statusMessage: "Failed to create user"
+            statusCode: 500, statusMessage: "Failed to create user"
         });
     }
 
-    // Send success response
+    delete newUser.password;
+
+    // Send response with completed user data
     event.node.res.statusCode = 201;
     return {
-        message: "User created successfully"
-    };
+        success: true, message: "User created successfully", data: {newUser}
+    }
 });
