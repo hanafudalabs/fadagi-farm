@@ -5,7 +5,7 @@ export const removeTestUser = async () => {
     await prisma.user.deleteMany({
         where: {
             email: {
-                contain: "test"
+                contains: "test"
             }
         }
     });
