@@ -63,10 +63,23 @@ CREATE TABLE `Investment` (
     `id` VARCHAR(191) NOT NULL,
     `investmentDate` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `initialAmount` DOUBLE NOT NULL,
-    `projectedAmount` DOUBLE NULL,
+    `projectedProfit` DOUBLE NULL,
     `finalProfit` DOUBLE NULL,
-    `status` ENUM('ACTIVE', 'INACTIVE') NOT NULL DEFAULT 'ACTIVE',
+    `status` ENUM('ACTIVE', 'COMPLETED', 'CANCELLED') NOT NULL DEFAULT 'ACTIVE',
     `investorId` VARCHAR(191) NOT NULL,
+
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `Saving` (
+    `id` VARCHAR(191) NOT NULL,
+    `name` VARCHAR(191) NOT NULL,
+    `balance` DOUBLE NOT NULL DEFAULT 0,
+    `status` ENUM('ACTIVE', 'CLOSED') NOT NULL DEFAULT 'ACTIVE',
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+    `userId` VARCHAR(191) NOT NULL,
 
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -75,12 +88,57 @@ CREATE TABLE `Investment` (
 CREATE TABLE `Transaction` (
     `id` VARCHAR(191) NOT NULL,
     `amount` DOUBLE NOT NULL,
-    `type` ENUM('INVESTMENT_DEPOSIT', 'PROFIT_PAYOUT', 'REFERRAL_COMMISSION', 'WITHDRAWAL') NOT NULL,
+    `type` ENUM('INVESTMENT_DEPOSIT', 'PROFIT_PAYOUT', 'SAVING_DEPOSIT', 'SAVING_WITHDRAWAL', 'REFERRAL_COMMISSION', 'GENERAL_WITHDRAWAL') NOT NULL,
     `status` ENUM('PENDING', 'SUCCESS', 'FAILED') NOT NULL DEFAULT 'PENDING',
+    `notes` VARCHAR(191) NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `userId` VARCHAR(191) NOT NULL,
     `investmentId` VARCHAR(191) NULL,
+    `savingId` VARCHAR(191) NULL,
 
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `Document` (
+    `id` VARCHAR(191) NOT NULL,
+    `name` VARCHAR(191) NOT NULL,
+    `url` VARCHAR(191) NOT NULL,
+    `type` ENUM('AGREEMENT', 'PAYMENT_PROOF', 'INSURANCE_POLICY', 'IDENTITY_CARD', 'OTHER') NOT NULL,
+    `uploadedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `userId` VARCHAR(191) NULL,
+    `investmentId` VARCHAR(191) NULL,
+    `savingId` VARCHAR(191) NULL,
+
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `Insurance` (
+    `id` VARCHAR(191) NOT NULL,
+    `policyNumber` VARCHAR(191) NOT NULL,
+    `provider` VARCHAR(191) NOT NULL,
+    `coverageAmount` DOUBLE NOT NULL,
+    `startDate` DATETIME(3) NOT NULL,
+    `endDate` DATETIME(3) NOT NULL,
+    `status` ENUM('ACTIVE', 'CLAIMED', 'EXPIRED') NOT NULL DEFAULT 'ACTIVE',
+    `investmentId` VARCHAR(191) NULL,
+
+    UNIQUE INDEX `Insurance_policyNumber_key`(`policyNumber`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `Shipment` (
+    `id` VARCHAR(191) NOT NULL,
+    `shippingDate` DATETIME(3) NOT NULL,
+    `trackingNumber` VARCHAR(191) NULL,
+    `address` VARCHAR(191) NOT NULL,
+    `recipient` VARCHAR(191) NOT NULL,
+    `status` ENUM('PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED') NOT NULL DEFAULT 'PROCESSING',
+    `investmentId` VARCHAR(191) NULL,
+
+    UNIQUE INDEX `Shipment_investmentId_key`(`investmentId`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -100,7 +158,28 @@ ALTER TABLE `CattleUpdate` ADD CONSTRAINT `CattleUpdate_cattleId_fkey` FOREIGN K
 ALTER TABLE `Investment` ADD CONSTRAINT `Investment_investorId_fkey` FOREIGN KEY (`investorId`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE `Saving` ADD CONSTRAINT `Saving_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE `Transaction` ADD CONSTRAINT `Transaction_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `Transaction` ADD CONSTRAINT `Transaction_investmentId_fkey` FOREIGN KEY (`investmentId`) REFERENCES `Investment`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Transaction` ADD CONSTRAINT `Transaction_savingId_fkey` FOREIGN KEY (`savingId`) REFERENCES `Saving`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Document` ADD CONSTRAINT `Document_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Document` ADD CONSTRAINT `Document_investmentId_fkey` FOREIGN KEY (`investmentId`) REFERENCES `Investment`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Document` ADD CONSTRAINT `Document_savingId_fkey` FOREIGN KEY (`savingId`) REFERENCES `Saving`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Insurance` ADD CONSTRAINT `Insurance_investmentId_fkey` FOREIGN KEY (`investmentId`) REFERENCES `Investment`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Shipment` ADD CONSTRAINT `Shipment_investmentId_fkey` FOREIGN KEY (`investmentId`) REFERENCES `Investment`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
