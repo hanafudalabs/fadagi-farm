@@ -20,6 +20,10 @@
     "vue-router": "^4.5.1"
   },
   "devDependencies": {
-    "prisma": "^6.11.1"
+    "@types/jest": "^30.0.0",
+    "@types/supertest": "^6.0.3",
+    "jest": "^30.0.4",
+    "prisma": "^6.11.1",
+    "supertest": "^7.1.3"
   }
 }
