@@ -3,8 +3,8 @@ POST http://localhost:3000/api/auth/register
 Content-Type: application/json
 
 {
-  "name": "Budi Investor",
-  "email": "budi@investor.com",
+  "name": "Budi Investor Test User",
+  "email": "testbudi@investor.com",
   "password": "password123"
 }
 
@@ -13,8 +13,18 @@ POST http://localhost:3000/api/auth/register
 Content-Type: application/json
 
 {
-  "name": "Ari Setiawan asdf",
-  "email": "arikeren232ds@investor.com",
-  "password": "passdfasdfasdfasd2",
-  "referrerCode": "d156f5bf-c03c-451c-8e66-4d8e8fcda464"
+  "name": "Ari Setiawan Test User",
+  "email": "testari@investor.com",
+  "password": "password123",
+  "referrerCode": "<referral_code_from_referrer>"
+}
+
+### Login User (Investor)
+POST http://localhost:3000/api/auth/login
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "testbudi@investor.com",
+  "password": "password123"
 }
